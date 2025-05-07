@@ -25,6 +25,6 @@ pip install -e .
 
 ```bash
 # Use Anaconda
-conda create -n revise python=3.12 -y
+conda env create -f environment.yml
 conda activate revise
 ```
