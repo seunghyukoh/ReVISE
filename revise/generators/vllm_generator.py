@@ -1,0 +1,108 @@
+from dataclasses import dataclass
+from typing import List, Tuple
+
+import ray
+import torch
+from vllm import LLM, SamplingParams
+
+from .base import BaseGenerator, GenerationParams
+
+
+@dataclass
+class VllmGenerationParams(GenerationParams):
+    """
+    Generation parameters for vLLM.
+    """
+
+    def to_vllm_sampling_params(self) -> SamplingParams:
+        """
+        Convert to vLLM SamplingParams.
+        """
+        return SamplingParams(
+            max_tokens=self.max_new_tokens,
+            temperature=self.temperature,
+            top_p=self.top_p,
+            top_k=self.top_k if self.top_k is not None else -1,
+            n=self.num_completions,
+        )
+
+
+@ray.remote(num_gpus=1)
+def _generate_on_gpu(
+    prompts: List[str],
+    indices: List[int],
+    sampling_params: VllmGenerationParams,
+    model: str,
+):
+    """
+    Ray actor: runs on a single GPU using provided SamplingParams.
+    """
+    # Instantiate LLM on this GPU
+    # Ray will set CUDA_VISIBLE_DEVICES, so use cuda:0 to refer to the assigned GPU
+    llm = LLM(model=model, device="cuda:0")
+    request_output = llm.generate(prompts, sampling_params=sampling_params)
+    results = []
+    for idx, req_output in enumerate(request_output):
+        texts = [output.text for output in req_output.outputs if output.text]
+        results.append((indices[idx], texts))
+    return results
+
+
+class VllmGenerator(BaseGenerator):
+    """
+    Generator implementation using vLLM and Ray for GPU-parallel inference.
+    """
+
+    def __init__(self, model: str, gen_params: VllmGenerationParams = None):
+        self.model = model
+        self.gen_params = gen_params or VllmGenerationParams()
+        self.num_gpus = torch.cuda.device_count()
+        if self.num_gpus == 0:
+            raise RuntimeError("No GPUs available")
+
+        if not ray.is_initialized():
+            ray.init()
+
+    def _chunk_prompts(
+        self, prompts: List[str]
+    ) -> Tuple[List[List[str]], List[List[int]]]:
+        """
+        Split prompts into chunks based on available GPUs and track original indices.
+        """
+        chunk_size = (len(prompts) + self.num_gpus - 1) // self.num_gpus
+        prompt_chunks = [
+            prompts[i * chunk_size : min((i + 1) * chunk_size, len(prompts))]
+            for i in range(self.num_gpus)
+        ]
+        index_chunks = [
+            list(range(i * chunk_size, min((i + 1) * chunk_size, len(prompts))))
+            for i in range(self.num_gpus)
+        ]
+        return prompt_chunks, index_chunks
+
+    def generate(self, prompts: List[str]) -> List[List[str]]:
+        # Prepare tasks
+        sampling_params = self.gen_params.to_vllm_sampling_params()
+        # Split prompts and indices into GPU-based chunks
+        prompt_chunks, index_chunks = self._chunk_prompts(prompts)
+        futures = [
+            _generate_on_gpu.remote(
+                prompt_chunks[i], index_chunks[i], sampling_params, self.model
+            )
+            for i in range(self.num_gpus)
+            if prompt_chunks[i]
+        ]
+        results = ray.get(futures)
+        # Merge preserving original order by index
+        all_items = [item for sub in results for item in sub]
+        all_items.sort(key=lambda x: x[0])
+        return [texts for _, texts in all_items]
+
+    def shutdown(self):
+        ray.shutdown()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.shutdown()
