@@ -59,3 +59,11 @@ The answer is 5.""",
 
         exact_match = evaluator.run(self.gt_answers, self.flexible_correct_predictions)
         assert exact_match == 1.0
+
+    def test_run_return_results(self):
+        evaluator = GSM8KEvaluator(mode="strict")
+        results = evaluator.run(
+            self.gt_answers, self.strict_correct_predictions, return_results=True
+        )
+        assert results["exact_match"] == 1.0
+        assert all(results["score_list"])
