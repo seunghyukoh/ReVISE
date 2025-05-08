@@ -24,6 +24,7 @@ class VllmGenerationParams(GenerationParams):
             top_p=self.top_p,
             top_k=self.top_k if self.top_k is not None else -1,
             n=self.num_completions,
+            seed=self.seed,
         )
 
 
@@ -43,7 +44,12 @@ def _generate_on_gpu(
     request_output = llm.generate(prompts, sampling_params=sampling_params)
     results = []
     for idx, req_output in enumerate(request_output):
-        texts = [output.text for output in req_output.outputs if output.text]
+        # We only want to include outputs that are complete (i.e. ended with an EOS token)
+        texts = [
+            completion.text
+            for completion in req_output.outputs
+            if completion.finish_reason == "stop" and completion.text
+        ]
         results.append((indices[idx], texts))
     return results
 
@@ -59,9 +65,6 @@ class VllmGenerator(BaseGenerator):
         self.num_gpus = torch.cuda.device_count()
         if self.num_gpus == 0:
             raise RuntimeError("No GPUs available")
-
-        if not ray.is_initialized():
-            ray.init()
 
     def _chunk_prompts(
         self, prompts: List[str]
@@ -81,13 +84,19 @@ class VllmGenerator(BaseGenerator):
         return prompt_chunks, index_chunks
 
     def generate(self, prompts: List[str]) -> List[List[str]]:
+        if not ray.is_initialized():
+            ray.init()
+
         # Prepare tasks
         sampling_params = self.gen_params.to_vllm_sampling_params()
         # Split prompts and indices into GPU-based chunks
         prompt_chunks, index_chunks = self._chunk_prompts(prompts)
         futures = [
             _generate_on_gpu.remote(
-                prompt_chunks[i], index_chunks[i], sampling_params, self.model
+                prompt_chunks[i],
+                index_chunks[i],
+                sampling_params,
+                self.model,
             )
             for i in range(self.num_gpus)
             if prompt_chunks[i]
