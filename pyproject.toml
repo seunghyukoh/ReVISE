@@ -9,6 +9,7 @@ dependencies = [
     "torch>=2.6.0",
     "accelerate>=1.5.2",
     "datasets>=3.5.1",
+    "evaluate>=0.4.3",
     "transformers>=4.33.3",
     "vllm>=0.8.5",
     "flash-attn>=2.7.4.post1",
