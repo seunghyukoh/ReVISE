@@ -4,6 +4,16 @@ from datasets import Dataset
 from transformers import PreTrainedTokenizer, PreTrainedTokenizerFast
 
 
+# TODO: Name this better
+def prepare_messages_gsm8k(question: str) -> str:
+    user_message_template = "{question}\nLet's think step by step. Put your final answer at the end with 'The answer is: .'"
+    user_message = user_message_template.format(question=question)
+    return [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": user_message},
+    ]
+
+
 def prepare_prompts_gsm8k(
     dataset: Dataset,
     tokenizer: Union[PreTrainedTokenizerFast, PreTrainedTokenizer],

@@ -10,6 +10,8 @@ from transformers import AutoTokenizer
 
 import inspect
 
+from revise.prompts import prepare_messages_gsm8k
+
 
 def configure_logging():
     logging.basicConfig(
@@ -27,7 +29,7 @@ def hash_params(params):
     ).hexdigest()
 
 
-def make_dataset(
+def generate_and_evaluate(
     model_path,
     dataset,
     evaluator,
@@ -129,13 +131,99 @@ def make_dataset(
     return new_dataset
 
 
+def make_dataset(
+    dataset,
+    question_key,
+    answer_key,
+    prediction_key,
+    for_verifier=False,
+    use_gt: bool = False,
+    rethink_token="<|reserved_special_token_0|>",
+):
+    if question_key not in dataset.column_names:
+        raise ValueError("Dataset must contain a 'question' column.")
+
+    if answer_key not in dataset.column_names:
+        raise ValueError("Dataset must contain a 'answer' column.")
+
+    if prediction_key not in dataset.column_names:
+        raise ValueError("Dataset must contain a 'prediction' column.")
+
+    if "is_correct" not in dataset.column_names:
+        raise ValueError("Dataset must contain a 'is_correct' column.")
+
+    new_dataset = []
+
+    for sample in dataset:
+        question = sample[question_key]
+        gt_answer = sample[answer_key]
+
+        prediction = sample[prediction_key]
+        prediction = prediction.split(rethink_token)[-1]
+
+        is_correct = sample["is_correct"]
+
+        if is_correct:
+            chosen_message = prediction
+            rejected_message = prediction + rethink_token
+        else:
+            chosen_message = prediction + rethink_token
+            if not for_verifier:
+                chosen_message += gt_answer
+            rejected_message = prediction
+
+        user_messages = prepare_messages_gsm8k(question)
+        chosen = user_messages + [{"role": "assistant", "content": chosen_message}]
+        rejected = user_messages + [{"role": "assistant", "content": rejected_message}]
+
+        new_dataset.append(
+            {
+                question_key: question,
+                answer_key: gt_answer,
+                prediction_key: prediction,
+                "is_correct": is_correct,
+                "chosen": chosen,
+                "rejected": rejected,
+            }
+        )
+
+    if use_gt:
+        # Use gt answer as prediction
+        for sample in dataset:
+            question = sample[question_key]
+            gt_answer = sample[answer_key]
+
+            chosen_message = gt_answer
+            rejected_message = gt_answer + rethink_token
+
+            user_messages = prepare_messages_gsm8k(question)
+            chosen = user_messages + [{"role": "assistant", "content": chosen_message}]
+            rejected = user_messages + [
+                {"role": "assistant", "content": rejected_message}
+            ]
+
+            new_dataset.append(
+                {
+                    question_key: question,
+                    answer_key: gt_answer,
+                    prediction_key: gt_answer,
+                    "is_correct": True,
+                    "is_gt": True,
+                    "chosen": chosen,
+                    "rejected": rejected,
+                }
+            )
+
+    new_dataset = Dataset.from_list(new_dataset)
+    return new_dataset
+
+
 if __name__ == "__main__":
     from prompts import prepare_prompts_fns
 
     logger = configure_logging()
 
-    # Get evaluator
-    make_dataset(
+    new_dataset_evaluated = generate_and_evaluate(
         model_path="meta-llama/llama-3.2-1b-instruct",
         evaluator=GSM8KEvaluator(mode="flexible"),
         dataset=load_dataset("openai/gsm8k", name="main"),
@@ -143,3 +231,16 @@ if __name__ == "__main__":
         num_examples=100,
         num_completions=2,
     )
+
+    new_dataset = make_dataset(
+        dataset=new_dataset_evaluated,
+        question_key="question",
+        answer_key="answer",
+        prediction_key="prediction",
+    )
+
+    import ray
+    import pdb
+
+    ray.shutdown()
+    pdb.set_trace()
