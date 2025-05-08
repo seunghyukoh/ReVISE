@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Literal, Union
 
 from revise.evaluators.metrics import compute_exact_match
-from revise.evaluators.utils import last_boxed_only_string, remove_boxed
+from revise.evaluators.utils_hendrycks_math import last_boxed_only_string, remove_boxed
 from revise.filters import RegexFilter
 
 
