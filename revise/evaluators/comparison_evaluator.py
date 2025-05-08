@@ -1,10 +1,7 @@
-import re
-import string
 from abc import ABC, abstractmethod
-from typing import List, Literal
+from typing import Any, Dict, List, Literal, Union
 
-import numpy as np
-
+from revise.evaluators.metrics import compute_exact_match
 from revise.filters import BaseFilter, RegexFilter
 
 
@@ -13,52 +10,20 @@ class BaseComparisonEvaluator(ABC):
     prediction_filter: BaseFilter
 
     @abstractmethod
-    def run(self, answers: List[str], predictions: List[str]) -> float:
+    def run(
+        self, answers: List[str], predictions: List[str], return_results: bool = False
+    ) -> Union[float, Dict[str, Any]]:
         """Run the evaluator on the given answers and predictions.
 
         Args:
             answers (List[str]): gt_answers including the reference answer
             predictions (List[str]): predictions including the extracted answer
+            return_results (bool): whether to return the results
 
         Returns:
-            float: score
+            Union[float, Dict[str, Any]]: score or results
         """
         ...
-
-
-def exact_match_compute(
-    predictions,
-    references,
-    regexes_to_ignore=None,
-    ignore_case=False,
-    ignore_punctuation=False,
-    ignore_numbers=False,
-):
-    if regexes_to_ignore is not None:
-        for s in regexes_to_ignore:
-            predictions = np.array([re.sub(s, "", x) for x in predictions])
-            references = np.array([re.sub(s, "", x) for x in references])
-    else:
-        predictions = np.asarray(predictions)
-        references = np.asarray(references)
-
-    if ignore_case:
-        predictions = np.char.lower(predictions)
-        references = np.char.lower(references)
-
-    if ignore_punctuation:
-        repl_table = string.punctuation.maketrans("", "", string.punctuation)
-        predictions = np.char.translate(predictions, table=repl_table)
-        references = np.char.translate(references, table=repl_table)
-
-    if ignore_numbers:
-        repl_table = string.digits.maketrans("", "", string.digits)
-        predictions = np.char.translate(predictions, table=repl_table)
-        references = np.char.translate(references, table=repl_table)
-
-    score_list = predictions == references
-
-    return {"exact_match": np.mean(score_list), "score_list": score_list.tolist()}
 
 
 class GSM8KEvaluator(BaseComparisonEvaluator):
@@ -90,11 +55,11 @@ class GSM8KEvaluator(BaseComparisonEvaluator):
 
     def run(
         self, answers: List[str], predictions: List[str], return_results: bool = False
-    ) -> float:
+    ) -> Union[float, Dict[str, Any]]:
         references = self.answer_filter.run(answers)
         predictions = self.prediction_filter.run(predictions)
 
-        results = exact_match_compute(
+        results = compute_exact_match(
             references=references,
             predictions=predictions,
             regexes_to_ignore=self.regexes_to_ignore,

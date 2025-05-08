@@ -1,6 +1,6 @@
 import pytest
 
-from revise.evaluators.comparison import GSM8KEvaluator
+from revise.evaluators.comparison_evaluator import GSM8KEvaluator
 
 
 @pytest.mark.unit
