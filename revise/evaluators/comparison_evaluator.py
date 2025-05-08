@@ -2,13 +2,11 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Literal, Union
 
 from revise.evaluators.metrics import compute_exact_match
-from revise.filters import BaseFilter, RegexFilter
+from revise.evaluators.utils import last_boxed_only_string, remove_boxed
+from revise.filters import RegexFilter
 
 
 class BaseComparisonEvaluator(ABC):
-    answer_filter: BaseFilter
-    prediction_filter: BaseFilter
-
     @abstractmethod
     def run(
         self, answers: List[str], predictions: List[str], return_results: bool = False
@@ -58,6 +56,38 @@ class GSM8KEvaluator(BaseComparisonEvaluator):
     ) -> Union[float, Dict[str, Any]]:
         references = self.answer_filter.run(answers)
         predictions = self.prediction_filter.run(predictions)
+
+        results = compute_exact_match(
+            references=references,
+            predictions=predictions,
+            regexes_to_ignore=self.regexes_to_ignore,
+            ignore_case=self.ignore_case,
+            ignore_punctuation=self.ignore_punctuation,
+        )
+
+        if return_results:
+            return results
+
+        return results["exact_match"]
+
+
+class MATHEvaluator(BaseComparisonEvaluator):
+    def __init__(self):
+        self.regexes_to_ignore = None
+        self.ignore_case = False
+        self.ignore_punctuation = False
+
+    def run(
+        self, answers: List[str], predictions: List[str], return_results: bool = False
+    ) -> Union[float, Dict[str, Any]]:
+        def process(text: str) -> str:
+            try:
+                return remove_boxed(last_boxed_only_string(text))
+            except Exception:
+                return text
+
+        references = [process(answer) for answer in answers]
+        predictions = [process(prediction) for prediction in predictions]
 
         results = compute_exact_match(
             references=references,

@@ -1,6 +1,6 @@
 import pytest
 
-from revise.evaluators.comparison_evaluator import GSM8KEvaluator
+from revise.evaluators.comparison_evaluator import GSM8KEvaluator, MATHEvaluator
 
 
 @pytest.mark.unit
@@ -67,3 +67,51 @@ The answer is 5.""",
         )
         assert results["exact_match"] == 1.0
         assert all(results["score_list"])
+
+
+@pytest.mark.unit
+class TestMATHEvaluator:
+    gt_answers = [
+        """For the piecewise function to be continuous, the cases must "meet" at $2$ and $-2$.
+For example, $ax+3$ and $x-5$ must be equal when $x=2$.
+This implies $a(2)+3=2-5$, which we solve to get $2a=-6 \\Rightarrow a=-3$.
+Similarly, $x-5$ and $2x-b$ must be equal when $x=-2$.
+Substituting, we get $-2-5=2(-2)-b$, which implies $b=3$. So $a+b=-3+3=\\boxed{0}$."""
+    ]
+
+    correct_predictions = ["So $a+b=-3+3=\\boxed{0}$."]
+    wrong_predictions = [
+        "So $a+b=-3+3=\\boxed{1}$.",  # Wrong answer
+        "So $a+b=-3+3=boxed{0}$.",  # Wrong format
+        "",  # Blank
+    ]
+
+    def test_run_correct_predictions(self):
+        evaluator = MATHEvaluator()
+        exact_match = evaluator.run(self.gt_answers, self.correct_predictions)
+        assert exact_match == 1.0
+
+    def test_run_wrong_predictions(self):
+        evaluator = MATHEvaluator()
+        exact_match = evaluator.run(
+            self.gt_answers * len(self.wrong_predictions), self.wrong_predictions
+        )
+        assert exact_match == 0.0
+
+    def test_run_return_results(self):
+        evaluator = MATHEvaluator()
+        results = evaluator.run(
+            self.gt_answers, self.correct_predictions, return_results=True
+        )
+        assert results["exact_match"] == 1.0
+        assert all(results["score_list"])
+
+    def test_run_return_results_wrong_predictions(self):
+        evaluator = MATHEvaluator()
+        results = evaluator.run(
+            self.gt_answers * len(self.wrong_predictions),
+            self.wrong_predictions,
+            return_results=True,
+        )
+        assert results["exact_match"] == 0.0
+        assert not all(results["score_list"])
