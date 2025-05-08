@@ -60,6 +60,7 @@ def make_dataset(
     )
     hashed = hash_params(params)
     cache_path = f"./.cache/{hashed}.jsonl"
+    os.makedirs(".cache", exist_ok=True)
     if os.path.exists(cache_path) and not ignore_cache:
         logger.info(f"Loading dataset from cache: {cache_path}")
         with open(cache_path, "r") as f:
@@ -88,6 +89,7 @@ def make_dataset(
         num_completions=num_completions,
         top_p=top_p,
         seed=seed,
+        skip_special_tokens=False,
     )
     generator = VllmGenerator(model=model_path, gen_params=generation_params)
 
