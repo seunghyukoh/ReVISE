@@ -45,7 +45,7 @@ class RegexFilter(BaseFilter):
         except Exception as _:
             return self.ERROR
 
-    def run(self, texts: List[str], disable_tqdm: bool = False) -> List[str]:
+    def run(self, texts: List[str], disable_tqdm: bool = True) -> List[str]:
         results = []
 
         for text in tqdm(texts, disable=disable_tqdm):
