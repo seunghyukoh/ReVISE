@@ -151,5 +151,16 @@ class TestVllmGeneratorWithPytest:
 
         prompt_chunks, index_chunks = generator._chunk_messages(messages)
 
-        assert prompt_chunks == [["prompt 1", "prompt 2"], ["prompt 3"]]
-        assert index_chunks == [[0, 1], [2]]
+        assert prompt_chunks == [
+            [
+                [
+                    {"role": "user", "content": "prompt 1"},
+                ]
+            ],
+            [
+                [
+                    {"role": "user", "content": "prompt 2"},
+                ]
+            ],
+        ]
+        assert index_chunks == [[0], [1]]

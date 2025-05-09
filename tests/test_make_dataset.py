@@ -4,8 +4,8 @@ import pytest
 from datasets import Dataset
 
 from revise import GSM8KEvaluator
-from revise.make_dataset import generate_and_evaluate
-from revise.prompts import prepare_prompts_gsm8k
+from revise.make_dataset import generate_and_evaluate, make_dataset
+from revise.prompts import prepare_batch_user_messages_fns
 
 
 class MockTokenizer:
@@ -19,7 +19,7 @@ class MockTokenizer:
 @pytest.mark.unit
 class TestMakeDataset:
     @patch("ray.get")
-    @patch("revise.generators.vllm_generator._generate_on_gpu")
+    @patch("revise.generators.vllm_generator._generate_on_gpu_chat")
     @patch("transformers.AutoTokenizer")
     def test_generate_and_evaluate(
         self, mock_auto_tokenizer, mock_generate_on_gpu, mock_ray_get, mock_vllm
@@ -31,7 +31,7 @@ class TestMakeDataset:
         ]
 
         dataset = generate_and_evaluate(
-            model_path="meta-llama/llama-3.2-1b-instruct",
+            model_path="test-model",
             dataset=Dataset.from_list(
                 [
                     {"question": "question 1", "answer": "answer 1"},
@@ -39,7 +39,46 @@ class TestMakeDataset:
                 ]
             ),
             evaluator=GSM8KEvaluator(),
-            prepare_batch_user_messages_fn=prepare_prompts_gsm8k,
+            prepare_batch_user_messages_fn=prepare_batch_user_messages_fns["gsm8k"],
         )
 
         assert len(dataset) == 2
+
+    def test_make_dataset(self):
+        question_key = "question"
+        answer_key = "answer"
+        prediction_key = "prediction"
+
+        dataset = make_dataset(
+            dataset=Dataset.from_list(
+                [
+                    {
+                        question_key: "question 1",
+                        answer_key: "answer 1",
+                        prediction_key: "prediction 1",
+                        "is_correct": True,
+                    },
+                    {
+                        question_key: "question 2",
+                        answer_key: "answer 2",
+                        prediction_key: "prediction 2",
+                        "is_correct": False,
+                    },
+                ],
+            ),
+            question_key=question_key,
+            answer_key=answer_key,
+            prediction_key=prediction_key,
+        )
+
+        assert len(dataset) == 2
+
+        assert dataset[0][question_key] == "question 1"
+        assert dataset[0][answer_key] == "answer 1"
+        assert dataset[0][prediction_key] == "prediction 1"
+        assert dataset[0]["is_correct"] is True
+
+        assert dataset[1][question_key] == "question 2"
+        assert dataset[1][answer_key] == "answer 2"
+        assert dataset[1][prediction_key] == "prediction 2"
+        assert dataset[1]["is_correct"] is False
