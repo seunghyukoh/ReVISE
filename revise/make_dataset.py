@@ -1,39 +1,22 @@
-import hashlib
+import inspect
 import json
-import logging
 import os
+from typing import Callable, Union
 
 from datasets import Dataset, load_dataset
-from evaluators.comparison_evaluator import GSM8KEvaluator
+from evaluators.comparison_evaluator import BaseComparisonEvaluator, GSM8KEvaluator
 from generators.vllm_generator import VllmGenerationParams, VllmGenerator
 from transformers import AutoTokenizer
-
-import inspect
+from utils import configure_logging, hash_params
 
 from revise.prompts import prepare_messages_gsm8k
 
 
-def configure_logging():
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-    logger = logging.getLogger(__name__)
-    return logger
-
-
-def hash_params(params):
-    return hashlib.sha256(
-        json.dumps(params, sort_keys=True).encode("utf-8")
-    ).hexdigest()
-
-
 def generate_and_evaluate(
-    model_path,
-    dataset,
-    evaluator,
-    prepare_prompts_fn,
+    model_path: str,
+    dataset: Dataset,
+    evaluator: Union[BaseComparisonEvaluator],
+    prepare_prompts_fn: Callable,
     max_new_tokens=1024,
     temperature=0.7,
     num_completions=10,
@@ -72,17 +55,16 @@ def generate_and_evaluate(
     tokenizer = AutoTokenizer.from_pretrained(model_path)
 
     # Load dataset
-    train_dataset = dataset["train"]
-    if question_key not in train_dataset.column_names:
+    if question_key not in dataset.column_names:
         raise ValueError(f"Dataset must contain a '{question_key}' column.")
-    if answer_key not in train_dataset.column_names:
+    if answer_key not in dataset.column_names:
         raise ValueError(f"Dataset must contain a '{answer_key}' column.")
 
     if num_examples > 0:
-        train_dataset = train_dataset.select(range(num_examples))
+        dataset = dataset.select(range(num_examples))
 
     # Make prompts
-    prompts = prepare_prompts_fn(train_dataset, tokenizer)
+    prompts = prepare_prompts_fn(dataset, tokenizer)
 
     # Get generator
     generation_params = VllmGenerationParams(
@@ -101,8 +83,8 @@ def generate_and_evaluate(
     # Evaluate
     new_dataset = []
 
-    questions = train_dataset[question_key]
-    gt_answers = train_dataset[answer_key]
+    questions = dataset[question_key]
+    gt_answers = dataset[answer_key]
     for question, gt_answer, prediction_set in zip(questions, gt_answers, predictions):
         num_predictions = len(prediction_set)
         scores = evaluator.run(
@@ -136,18 +118,18 @@ def make_dataset(
     question_key,
     answer_key,
     prediction_key,
-    for_verifier=False,
+    is_verifier=False,
     use_gt: bool = False,
     rethink_token="<|reserved_special_token_0|>",
 ):
     if question_key not in dataset.column_names:
-        raise ValueError("Dataset must contain a 'question' column.")
+        raise ValueError(f"Dataset must contain a '{question_key}' column.")
 
     if answer_key not in dataset.column_names:
-        raise ValueError("Dataset must contain a 'answer' column.")
+        raise ValueError(f"Dataset must contain a '{answer_key}' column.")
 
     if prediction_key not in dataset.column_names:
-        raise ValueError("Dataset must contain a 'prediction' column.")
+        raise ValueError(f"Dataset must contain a '{prediction_key}' column.")
 
     if "is_correct" not in dataset.column_names:
         raise ValueError("Dataset must contain a 'is_correct' column.")
@@ -168,7 +150,7 @@ def make_dataset(
             rejected_message = prediction + rethink_token
         else:
             chosen_message = prediction + rethink_token
-            if not for_verifier:
+            if not is_verifier:
                 chosen_message += gt_answer
             rejected_message = prediction
 
@@ -182,6 +164,7 @@ def make_dataset(
                 answer_key: gt_answer,
                 prediction_key: prediction,
                 "is_correct": is_correct,
+                "is_verifier": is_verifier,
                 "chosen": chosen,
                 "rejected": rejected,
             }
@@ -208,6 +191,7 @@ def make_dataset(
                     answer_key: gt_answer,
                     prediction_key: gt_answer,
                     "is_correct": True,
+                    "is_verifier": is_verifier,
                     "is_gt": True,
                     "chosen": chosen,
                     "rejected": rejected,
@@ -219,28 +203,48 @@ def make_dataset(
 
 
 if __name__ == "__main__":
+    from datasets import DatasetDict
     from prompts import prepare_prompts_fns
 
     logger = configure_logging()
 
-    new_dataset_evaluated = generate_and_evaluate(
+    new_train_dataset_evaluated = generate_and_evaluate(
         model_path="meta-llama/llama-3.2-1b-instruct",
         evaluator=GSM8KEvaluator(mode="flexible"),
-        dataset=load_dataset("openai/gsm8k", name="main"),
+        dataset=load_dataset("openai/gsm8k", name="main", split="train"),
         prepare_prompts_fn=prepare_prompts_fns["gsm8k"],
         num_examples=100,
         num_completions=2,
     )
 
-    new_dataset = make_dataset(
-        dataset=new_dataset_evaluated,
+    new_test_dataset_evaluated = generate_and_evaluate(
+        model_path="meta-llama/llama-3.2-1b-instruct",
+        evaluator=GSM8KEvaluator(mode="flexible"),
+        dataset=load_dataset("openai/gsm8k", name="main", split="test"),
+        prepare_prompts_fn=prepare_prompts_fns["gsm8k"],
+        num_examples=100,
+        num_completions=1,
+    )
+
+    new_train_dataset = make_dataset(
+        dataset=new_train_dataset_evaluated,
         question_key="question",
         answer_key="answer",
         prediction_key="prediction",
     )
 
-    import ray
-    import pdb
+    new_test_dataset = make_dataset(
+        dataset=new_test_dataset_evaluated,
+        question_key="question",
+        answer_key="answer",
+        prediction_key="prediction",
+    )
 
-    ray.shutdown()
-    pdb.set_trace()
+    new_dataset = DatasetDict(
+        {
+            "train": new_train_dataset,
+            "test": new_test_dataset,
+        }
+    )
+
+    new_dataset.push_to_hub("JakeOh/testtesttest")
