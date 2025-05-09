@@ -5,7 +5,7 @@ from datasets import Dataset
 
 from revise import GSM8KEvaluator
 from revise.make_dataset import generate_and_evaluate, make_dataset
-from revise.prompts import prepare_batch_chat_messages_fns
+from revise.prompts import prepare_batch_chat_messages_fns, prepare_chat_messages_fns
 
 
 class MockTokenizer:
@@ -48,6 +48,7 @@ class TestMakeDataset:
         question_key = "question"
         answer_key = "answer"
         prediction_key = "prediction"
+        prepare_chat_messages_fn = prepare_chat_messages_fns["gsm8k"]
 
         dataset = make_dataset(
             dataset=Dataset.from_list(
@@ -69,6 +70,7 @@ class TestMakeDataset:
             question_key=question_key,
             answer_key=answer_key,
             prediction_key=prediction_key,
+            prepare_chat_messages_fn=prepare_chat_messages_fn,
         )
 
         assert len(dataset) == 2
