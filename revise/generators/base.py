@@ -15,6 +15,8 @@ class GenerationParams:
     top_p: float = 1.0
     top_k: int | None = None
     num_completions: int = 1
+    seed: int | None = None
+    skip_special_tokens: bool = True
 
 
 class BaseGenerator(ABC):

@@ -101,6 +101,36 @@ class TestVllmGeneratorWithPytest:
         assert results == [["generated text 1"], ["generated text 2"]]
         assert mock_generate_on_gpu.remote.call_count == 2  # Device count
 
+    @patch("ray.get")
+    @patch("revise.generators.vllm_generator._generate_on_gpu_chat")
+    def test_chat(self, mock_generate_on_gpu_chat, mock_ray_get, mock_vllm):
+        """Test generate method with chat messages."""
+        mock_generate_on_gpu_chat.return_value = "future"
+        mock_ray_get.return_value = [
+            [(0, ["generated text 1"]), (1, ["generated text 2"])]
+        ]
+
+        batch_input_messages = [
+            [{"role": "user", "content": "prompt 1"}],
+            [{"role": "user", "content": "prompt 2"}],
+        ]
+
+        generator = VllmGenerator(model="test-model")
+        results = generator.chat(
+            [
+                [{"role": "user", "content": "prompt 1"}],
+                [{"role": "user", "content": "prompt 2"}],
+            ]
+        )
+
+        assert results == [
+            ["generated text 1"],
+            ["generated text 2"],
+        ]
+        assert mock_generate_on_gpu_chat.remote.call_count == min(
+            len(batch_input_messages), generator.num_gpus
+        )
+
     def test_chunk_prompts(self, mock_vllm):
         """Test _chunk_prompts method."""
         generator = VllmGenerator(model="test-model")
@@ -110,3 +140,27 @@ class TestVllmGeneratorWithPytest:
 
         assert prompt_chunks == [["prompt 1", "prompt 2"], ["prompt 3"]]
         assert index_chunks == [[0, 1], [2]]
+
+    def test_chunk_messages(self, mock_vllm):
+        """Test _chunk_messages method."""
+        generator = VllmGenerator(model="test-model")
+        messages = [
+            [{"role": "user", "content": "prompt 1"}],
+            [{"role": "user", "content": "prompt 2"}],
+        ]
+
+        prompt_chunks, index_chunks = generator._chunk_messages(messages)
+
+        assert prompt_chunks == [
+            [
+                [
+                    {"role": "user", "content": "prompt 1"},
+                ]
+            ],
+            [
+                [
+                    {"role": "user", "content": "prompt 2"},
+                ]
+            ],
+        ]
+        assert index_chunks == [[0], [1]]
