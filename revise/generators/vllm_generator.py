@@ -41,7 +41,12 @@ def _generate_on_gpu(
     """
     # Instantiate LLM on this GPU
     # Ray will set CUDA_VISIBLE_DEVICES, so use cuda:0 to refer to the assigned GPU
-    llm = LLM(model=model, device="cuda:0")
+    llm = LLM(
+        model=model,
+        device="cuda:0",
+        dtype=torch.float16,
+        task="generate",
+    )
     request_output = llm.generate(prompts, sampling_params=sampling_params)
     results = []
     for idx, req_output in enumerate(request_output):
@@ -62,7 +67,12 @@ def _generate_on_gpu_chat(
     sampling_params: VllmGenerationParams,
     model: str,
 ):
-    llm = LLM(model=model, device="cuda:0")
+    llm = LLM(
+        model=model,
+        device="cuda:0",
+        dtype=torch.float16,
+        task="generate",
+    )
     request_output = llm.chat(messages, sampling_params=sampling_params)
     results = []
     for idx, req_output in enumerate(request_output):
