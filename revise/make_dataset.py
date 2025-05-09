@@ -10,7 +10,7 @@ from revise.evaluators.comparison_evaluator import (
     GSM8KEvaluator,
 )
 from revise.generators.vllm_generator import VllmGenerationParams, VllmGenerator
-from revise.prompts import prepare_user_messages_gsm8k
+from revise.prompts import prepare_batch_chat_messages_fns, prepare_chat_messages_fns
 from revise.utils import configure_logging, hash_params
 
 logger = configure_logging(level="info")
@@ -20,7 +20,7 @@ def generate_and_evaluate(
     model_path: str,
     dataset: Dataset,
     evaluator: Union[BaseComparisonEvaluator],
-    prepare_batch_user_messages_fn: Callable,
+    prepare_batch_chat_messages_fn: Callable,
     max_new_tokens=1024,
     temperature=0.7,
     num_completions=10,
@@ -36,8 +36,8 @@ def generate_and_evaluate(
         model_path=model_path,
         dataset=str(dataset),
         evaluator_source=inspect.getsource(evaluator.__class__),
-        prepare_batch_user_messages_source=inspect.getsource(
-            prepare_batch_user_messages_fn
+        prepare_batch_chat_messages_source=inspect.getsource(
+            prepare_batch_chat_messages_fn
         ),
         max_new_tokens=max_new_tokens,
         temperature=temperature,
@@ -66,8 +66,8 @@ def generate_and_evaluate(
     if num_examples > 0:
         dataset = dataset.select(range(num_examples))
 
-    # Make user messages
-    batch_user_messages = prepare_batch_user_messages_fn(dataset)
+    # Make chat messages
+    batch_chat_messages = prepare_batch_chat_messages_fn(dataset)
 
     # Get generator
     generation_params = VllmGenerationParams(
@@ -81,7 +81,7 @@ def generate_and_evaluate(
     generator = VllmGenerator(model=model_path, gen_params=generation_params)
 
     # Generate
-    predictions = generator.chat(batch_user_messages)  # List[List[str]]
+    predictions = generator.chat(batch_chat_messages)  # List[List[str]]
 
     # Evaluate
     new_dataset = []
@@ -121,6 +121,7 @@ def make_dataset(
     question_key,
     answer_key,
     prediction_key,
+    prepare_chat_messages_fn: Callable,
     is_verifier=False,
     use_gt: bool = False,
     rethink_token="<|reserved_special_token_0|>",
@@ -157,7 +158,7 @@ def make_dataset(
                 chosen_message += gt_answer
             rejected_message = prediction
 
-        user_messages = prepare_user_messages_gsm8k(question)
+        user_messages = prepare_chat_messages_fn(question)
         chosen = user_messages + [{"role": "assistant", "content": chosen_message}]
         rejected = user_messages + [{"role": "assistant", "content": rejected_message}]
 
@@ -182,7 +183,7 @@ def make_dataset(
             chosen_message = gt_answer
             rejected_message = gt_answer + rethink_token
 
-            user_messages = prepare_user_messages_gsm8k(question)
+            user_messages = prepare_chat_messages_fn(question)
             chosen = user_messages + [{"role": "assistant", "content": chosen_message}]
             rejected = user_messages + [
                 {"role": "assistant", "content": rejected_message}
@@ -207,38 +208,69 @@ def make_dataset(
 
 if __name__ == "__main__":
     from datasets import DatasetDict
-    from prompts import prepare_batch_user_messages_fns
+    from prompts import prepare_batch_chat_messages_fns
+
+    evaluator = GSM8KEvaluator(mode="flexible")
+
+    dataset = load_dataset("openai/gsm8k", name="main")
+    train_dataset = dataset["train"]
+    test_dataset = dataset["test"]
+
+    prepare_batch_chat_messages_fn = prepare_batch_chat_messages_fns["gsm8k"]
+    prepare_chat_messages_fn = prepare_chat_messages_fns["gsm8k"]
+
+    question_key = "question"
+    answer_key = "answer"
+    prediction_key = "prediction"
+
+    train_num_examples = 100
+    test_num_examples = 10
+
+    train_num_completions = 4
+    test_num_completions = 1
+
+    seed = 42
 
     new_train_dataset_evaluated = generate_and_evaluate(
         model_path="meta-llama/llama-3.2-1b-instruct",
-        evaluator=GSM8KEvaluator(mode="flexible"),
-        dataset=load_dataset("openai/gsm8k", name="main", split="train"),
-        prepare_batch_user_messages_fn=prepare_batch_user_messages_fns["gsm8k"],
-        num_examples=100,
-        num_completions=2,
+        evaluator=evaluator,
+        dataset=train_dataset,
+        prepare_batch_chat_messages_fn=prepare_batch_chat_messages_fn,
+        num_examples=train_num_examples,
+        num_completions=train_num_completions,
+        seed=seed,
+        question_key=question_key,
+        answer_key=answer_key,
+        prediction_key=prediction_key,
     )
 
     new_test_dataset_evaluated = generate_and_evaluate(
         model_path="meta-llama/llama-3.2-1b-instruct",
-        evaluator=GSM8KEvaluator(mode="flexible"),
-        dataset=load_dataset("openai/gsm8k", name="main", split="test"),
-        prepare_batch_user_messages_fn=prepare_batch_user_messages_fns["gsm8k"],
-        num_examples=100,
-        num_completions=1,
+        evaluator=evaluator,
+        dataset=test_dataset,
+        prepare_batch_chat_messages_fn=prepare_batch_chat_messages_fn,
+        num_examples=test_num_examples,
+        num_completions=test_num_completions,
+        seed=seed,
+        question_key=question_key,
+        answer_key=answer_key,
+        prediction_key=prediction_key,
     )
 
     new_train_dataset = make_dataset(
         dataset=new_train_dataset_evaluated,
-        question_key="question",
-        answer_key="answer",
-        prediction_key="prediction",
+        question_key=question_key,
+        answer_key=answer_key,
+        prediction_key=prediction_key,
+        prepare_chat_messages_fn=prepare_chat_messages_fn,
     )
 
     new_test_dataset = make_dataset(
         dataset=new_test_dataset_evaluated,
-        question_key="question",
-        answer_key="answer",
-        prediction_key="prediction",
+        question_key=question_key,
+        answer_key=answer_key,
+        prediction_key=prediction_key,
+        prepare_chat_messages_fn=prepare_chat_messages_fn,
     )
 
     new_dataset = DatasetDict(
