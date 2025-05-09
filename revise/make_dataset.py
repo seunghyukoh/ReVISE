@@ -4,12 +4,17 @@ import os
 from typing import Callable, Union
 
 from datasets import Dataset, load_dataset
-from evaluators.comparison_evaluator import BaseComparisonEvaluator, GSM8KEvaluator
-from generators.vllm_generator import VllmGenerationParams, VllmGenerator
 from transformers import AutoTokenizer
-from utils import configure_logging, hash_params
 
+from revise.evaluators.comparison_evaluator import (
+    BaseComparisonEvaluator,
+    GSM8KEvaluator,
+)
+from revise.generators.vllm_generator import VllmGenerationParams, VllmGenerator
 from revise.prompts import prepare_messages_gsm8k
+from revise.utils import configure_logging, hash_params
+
+logger = configure_logging(level="info")
 
 
 def generate_and_evaluate(
@@ -205,8 +210,6 @@ def make_dataset(
 if __name__ == "__main__":
     from datasets import DatasetDict
     from prompts import prepare_prompts_fns
-
-    logger = configure_logging()
 
     new_train_dataset_evaluated = generate_and_evaluate(
         model_path="meta-llama/llama-3.2-1b-instruct",
