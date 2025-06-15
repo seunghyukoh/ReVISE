@@ -21,6 +21,9 @@ from trl import DataCollatorForCompletionOnlyLM
 from revise.args.parser import parse_args
 from revise.args.sft import ModelArguments, SFTArguments
 
+logger = logging.getLogger(__name__)
+is_main_process = True
+
 
 def get_model_and_tokenizer(
     model_args: ModelArguments,
@@ -147,7 +150,6 @@ if __name__ == "__main__":
 
     load_dotenv()
 
-    logger = logging.getLogger(__name__)
     logger.setLevel(logging.INFO)
     os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
