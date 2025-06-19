@@ -36,7 +36,7 @@ if __name__ == "__main__":
     model = AutoModelForCausalLM.from_pretrained(
         training_args.model_name_or_path,
         attn_implementation="flash_attention_2",  # Enable Flash Attention
-        torch_dtype="bfloat16",
+        torch_dtype=torch.bfloat16,
         device_map="auto",
     )
 
