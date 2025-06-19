@@ -3,16 +3,24 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser
 from trl import SFTTrainer
 
 from revise.args.sft import SFTConfig
+from revise.prompts import prepare_chat_messages_fns
+from revise.config import DEFAULT_CHAT_TEMPLATE
 
 
 def load_dataset(path: str, name: str):
     from datasets import load_dataset
 
     dataset = load_dataset(path, name=name)
+    prepare_chat_messages_fn = prepare_chat_messages_fns["gsm8k"]
     dataset = dataset.map(
         lambda x: {
-            "prompt": f"{x['question']}\nThink step by step and then answer.",
-            "completion": x["answer"],
+            "prompt": prepare_chat_messages_fn(x["question"]),
+            "completion": [
+                {
+                    "role": "assistant",
+                    "content": x["answer"],
+                }
+            ],
         }
     )
 
@@ -35,6 +43,9 @@ if __name__ == "__main__":
     tokenizer = AutoTokenizer.from_pretrained(
         training_args.tokenizer_name_or_path or training_args.model_name_or_path
     )
+
+    if tokenizer.chat_template is None:
+        tokenizer.chat_template = DEFAULT_CHAT_TEMPLATE
 
     trainer = SFTTrainer(
         model=model,
