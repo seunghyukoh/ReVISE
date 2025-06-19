@@ -23,8 +23,11 @@ For this project, we recommend using Conda for its ease of use and compatibility
 ```bash
 python -m venv .venv
 source .venv/bin/activate
-
 pip install -e .
+# or
 conda env create -f environment.yml
 conda activate revise
+
+# Install flash-attn
+pip install flash-attn --no-build-isolation
 ```

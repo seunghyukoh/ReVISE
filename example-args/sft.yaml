@@ -1,0 +1,28 @@
+# Model
+chat_template: "{% for message in messages %}{% if message['role'] == 'system' %}{{ '<|system|>\n' + message['content'] + '\n' }}{% elif message['role'] == 'user' %}{{ '<|user|>\n' + message['content'] + '\n' }}{% elif message['role'] == 'assistant' %}{% if not loop.last %}{{ '<|assistant|>\n'  + message['content'] + eos_token + '\n' }}{% else %}{{ '<|assistant|>\n'  + message['content'] + eos_token }}{% endif %}{% endif %}{% if loop.last and add_generation_prompt %}{{ '<|assistant|>\n' }}{% endif %}{% endfor %}"
+dtype: bfloat16
+bf16: true
+fp16: false
+torch_compile: true
+
+# Data
+group_by_length: true
+
+# Training
+optim: adamw_torch
+learning_rate: 0.0001
+warmup_ratio: 0.1
+
+eval_strategy: steps
+eval_steps: 0.1
+
+report_to: wandb
+logging_steps: 5
+
+save_strategy: steps
+save_steps: 0.1
+save_total_limit: 1
+load_best_model_at_end: true
+
+# DDP
+ddp_find_unused_parameters: False
