@@ -3,8 +3,8 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser
 from trl import SFTTrainer
 
 from revise.args.sft import SFTConfig
-from revise.prompts import prepare_chat_messages_fns
 from revise.config import DEFAULT_CHAT_TEMPLATE
+from revise.prompts import prepare_chat_messages_fns
 
 
 def load_dataset(path: str, name: str):
@@ -31,13 +31,24 @@ if __name__ == "__main__":
     parser = HfArgumentParser(SFTConfig)
     [training_args] = parser.parse_args_into_dataclasses()
 
+    if training_args.should_log:
+        import wandb
+
+        wandb.init(
+            project="revise",
+            name="sft",
+            config=training_args.to_dict(),
+            tags=["gsm8k"],
+            group="sft",
+        )
+
     dataset = load_dataset(training_args.dataset_path, training_args.dataset_name)
 
     model = AutoModelForCausalLM.from_pretrained(
         training_args.model_name_or_path,
         attn_implementation="flash_attention_2",  # Enable Flash Attention
         torch_dtype=torch.bfloat16,
-        device_map="auto",
+        device_map="cuda",
     )
 
     tokenizer = AutoTokenizer.from_pretrained(
