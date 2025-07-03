@@ -4,7 +4,7 @@ from datasets import Dataset
 
 
 def prepare_gsm8k_chat_messages(question: str) -> str:
-    user_message_template = "{question}\nLet's think step by step. Put your final answer at the end with 'The answer is: .'"
+    user_message_template = "{question}\nLet's think step by step. Put your final answer at the end with #### <answer>"
     user_message = user_message_template.format(question=question)
     return [
         {"role": "system", "content": "You are a helpful assistant."},
