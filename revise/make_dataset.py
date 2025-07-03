@@ -5,6 +5,7 @@ from typing import Callable, Union
 
 from datasets import Dataset, load_dataset
 
+from revise.config import DEFAULT_REFINE_TOKEN
 from revise.evaluators.comparison_evaluator import (
     BaseComparisonEvaluator,
     GSM8KEvaluator,
@@ -21,7 +22,7 @@ def generate_and_evaluate(
     dataset: Dataset,
     evaluator: Union[BaseComparisonEvaluator],
     prepare_batch_chat_messages_fn: Callable,
-    max_new_tokens=1024,
+    max_new_tokens=2048,
     temperature=0.7,
     num_completions=10,
     top_p=0.9,
@@ -67,7 +68,7 @@ def generate_and_evaluate(
         dataset = dataset.select(range(num_examples))
 
     # Make chat messages
-    batch_chat_messages = prepare_batch_chat_messages_fn(dataset)
+    batch_chat_messages = prepare_batch_chat_messages_fn(dataset=dataset)
 
     # Get generator
     generation_params = VllmGenerationParams(
@@ -88,8 +89,18 @@ def generate_and_evaluate(
 
     questions = dataset[question_key]
     gt_answers = dataset[answer_key]
+
     for question, gt_answer, prediction_set in zip(questions, gt_answers, predictions):
         num_predictions = len(prediction_set)
+        if num_predictions < num_completions:
+            logger.warning(
+                f"Only {num_predictions} predictions generated for {question}"
+            )
+
+        if num_predictions == 0:
+            logger.warning(f"No predictions generated for {question}")
+            continue
+
         scores = evaluator.run(
             answers=[gt_answer] * num_predictions,
             predictions=prediction_set,
@@ -122,9 +133,9 @@ def make_dataset(
     answer_key,
     prediction_key,
     prepare_chat_messages_fn: Callable,
-    is_verifier=False,
+    is_for_verifier_training=False,
     use_gt: bool = False,
-    rethink_token="<|reserved_special_token_0|>",
+    refine_token=DEFAULT_REFINE_TOKEN,
 ):
     if question_key not in dataset.column_names:
         raise ValueError(f"Dataset must contain a '{question_key}' column.")
@@ -145,16 +156,16 @@ def make_dataset(
         gt_answer = sample[answer_key]
 
         prediction = sample[prediction_key]
-        prediction = prediction.split(rethink_token)[-1]
+        prediction = prediction.split(refine_token)[-1]
 
         is_correct = sample["is_correct"]
 
         if is_correct:
             chosen_message = prediction
-            rejected_message = prediction + rethink_token
+            rejected_message = prediction + refine_token
         else:
-            chosen_message = prediction + rethink_token
-            if not is_verifier:
+            chosen_message = prediction + refine_token
+            if not is_for_verifier_training:
                 chosen_message += gt_answer
             rejected_message = prediction
 
@@ -168,7 +179,7 @@ def make_dataset(
                 answer_key: gt_answer,
                 prediction_key: prediction,
                 "is_correct": is_correct,
-                "is_verifier": is_verifier,
+                "is_verifier": is_for_verifier_training,
                 "chosen": chosen,
                 "rejected": rejected,
             }
@@ -181,7 +192,7 @@ def make_dataset(
             gt_answer = sample[answer_key]
 
             chosen_message = gt_answer
-            rejected_message = gt_answer + rethink_token
+            rejected_message = gt_answer + refine_token
 
             user_messages = prepare_chat_messages_fn(question)
             chosen = user_messages + [{"role": "assistant", "content": chosen_message}]
@@ -195,7 +206,7 @@ def make_dataset(
                     answer_key: gt_answer,
                     prediction_key: gt_answer,
                     "is_correct": True,
-                    "is_verifier": is_verifier,
+                    "is_verifier": is_for_verifier_training,
                     "is_gt": True,
                     "chosen": chosen,
                     "rejected": rejected,
@@ -209,75 +220,76 @@ def make_dataset(
 if __name__ == "__main__":
     from datasets import DatasetDict
     from prompts import prepare_batch_chat_messages_fns
+    from transformers.hf_argparser import HfArgumentParser
+
+    from revise.args.make_dataset import MakeDatasetArgs
+
+    parser = HfArgumentParser(MakeDatasetArgs)
+    [args] = parser.parse_args_into_dataclasses()
+
+    assert args.dataset_type in ["gsm8k"], "Only gsm8k is supported for now"
 
     evaluator = GSM8KEvaluator(mode="flexible")
 
-    dataset = load_dataset("openai/gsm8k", name="main")
+    dataset = load_dataset(args.dataset_path, args.dataset_name)
     train_dataset = dataset["train"]
-    test_dataset = dataset["test"]
+    eval_dataset = dataset["eval"]
 
-    prepare_batch_chat_messages_fn = prepare_batch_chat_messages_fns["gsm8k"]
-    prepare_chat_messages_fn = prepare_chat_messages_fns["gsm8k"]
-
-    question_key = "question"
-    answer_key = "answer"
-    prediction_key = "prediction"
-
-    train_num_examples = 100
-    test_num_examples = 10
-
-    train_num_completions = 4
-    test_num_completions = 1
-
-    seed = 42
+    prepare_batch_chat_messages_fn = prepare_batch_chat_messages_fns[args.dataset_type]
+    prepare_chat_messages_fn = prepare_chat_messages_fns[args.dataset_type]
 
     new_train_dataset_evaluated = generate_and_evaluate(
-        model_path="meta-llama/llama-3.2-1b-instruct",
+        model_path=args.model_name_or_path,
         evaluator=evaluator,
         dataset=train_dataset,
         prepare_batch_chat_messages_fn=prepare_batch_chat_messages_fn,
-        num_examples=train_num_examples,
-        num_completions=train_num_completions,
-        seed=seed,
-        question_key=question_key,
-        answer_key=answer_key,
-        prediction_key=prediction_key,
+        num_examples=args.train_num_examples,
+        num_completions=args.train_num_completions,
+        seed=args.seed,
+        question_key=args.question_key,
+        answer_key=args.answer_key,
+        prediction_key=args.prediction_key,
     )
 
-    new_test_dataset_evaluated = generate_and_evaluate(
-        model_path="meta-llama/llama-3.2-1b-instruct",
+    new_eval_dataset_evaluated = generate_and_evaluate(
+        model_path=args.model_name_or_path,
         evaluator=evaluator,
-        dataset=test_dataset,
+        dataset=eval_dataset,
         prepare_batch_chat_messages_fn=prepare_batch_chat_messages_fn,
-        num_examples=test_num_examples,
-        num_completions=test_num_completions,
-        seed=seed,
-        question_key=question_key,
-        answer_key=answer_key,
-        prediction_key=prediction_key,
+        num_examples=args.eval_num_examples,
+        num_completions=args.eval_num_completions,
+        seed=args.seed,
+        question_key=args.question_key,
+        answer_key=args.answer_key,
+        prediction_key=args.prediction_key,
     )
 
     new_train_dataset = make_dataset(
         dataset=new_train_dataset_evaluated,
-        question_key=question_key,
-        answer_key=answer_key,
-        prediction_key=prediction_key,
+        question_key=args.question_key,
+        answer_key=args.answer_key,
+        prediction_key=args.prediction_key,
         prepare_chat_messages_fn=prepare_chat_messages_fn,
+        is_for_verifier_training=args.is_for_verifier_training,
     )
 
-    new_test_dataset = make_dataset(
-        dataset=new_test_dataset_evaluated,
-        question_key=question_key,
-        answer_key=answer_key,
-        prediction_key=prediction_key,
+    new_eval_dataset = make_dataset(
+        dataset=new_eval_dataset_evaluated,
+        question_key=args.question_key,
+        answer_key=args.answer_key,
+        prediction_key=args.prediction_key,
         prepare_chat_messages_fn=prepare_chat_messages_fn,
+        is_for_verifier_training=args.is_for_verifier_training,
     )
 
     new_dataset = DatasetDict(
         {
             "train": new_train_dataset,
-            "test": new_test_dataset,
+            "eval": new_eval_dataset,
         }
     )
 
-    new_dataset.push_to_hub("JakeOh/testtesttest")
+    new_dataset.save_to_disk(args.output_dir)
+
+    if args.hub_repo_id is not None:
+        new_dataset.push_to_hub(args.hub_repo_id, config_name=args.hub_config_name)
