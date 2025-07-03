@@ -5,3 +5,4 @@ bash scripts/step-1-dataset.sh
 bash scripts/step-1-dpo.sh
 bash scripts/step-2-dataset.sh
 bash scripts/step-2-dpo.sh
+bash scripts/step-2-eval.sh
