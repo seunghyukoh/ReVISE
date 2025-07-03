@@ -11,12 +11,23 @@ def load_dataset(path: str, name: str):
 
     dataset = load_dataset(path, name=name)
 
-    return {"train": dataset["train"], "eval": dataset["test"]}
+    return {"train": dataset["train"], "eval": dataset["eval"]}
 
 
 if __name__ == "__main__":
     parser = HfArgumentParser(DPOConfig)
     [training_args] = parser.parse_args_into_dataclasses()
+
+    if training_args.should_log:
+        import wandb
+
+        wandb.init(
+            project="revise",
+            name=training_args.run_name,
+            config=training_args.to_dict(),
+            tags=["gsm8k"],
+            group="dpo",
+        )
 
     dataset = load_dataset(training_args.dataset_path, training_args.dataset_name)
 
@@ -24,7 +35,7 @@ if __name__ == "__main__":
         training_args.model_name_or_path,
         attn_implementation="flash_attention_2",  # Enable Flash Attention
         torch_dtype=torch.bfloat16,
-        device_map="auto",
+        device_map="cuda",
     )
 
     tokenizer = AutoTokenizer.from_pretrained(

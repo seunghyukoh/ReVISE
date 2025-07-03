@@ -5,6 +5,7 @@ from trl import DPOConfig as DefaultDPOConfig
 
 @dataclass
 class DPOConfig(DefaultDPOConfig):
+    run_name: str = field(default="dpo", metadata={"help": "The name of the run"})
     model_name_or_path: str = field(
         default=None, metadata={"help": "The model name or path to use for training"}
     )
@@ -23,8 +24,6 @@ class DPOConfig(DefaultDPOConfig):
         super().__post_init__()
         if self.model_name_or_path is None:
             raise ValueError("model_name_or_path is required")
-        if self.tokenizer_name_or_path is None:
-            raise ValueError("tokenizer_name_or_path is required")
         if self.dataset_path is None:
             raise ValueError("dataset_path is required")
         if self.dataset_name is None:
