@@ -25,7 +25,7 @@ if __name__ == "__main__":
             project="revise",
             name=training_args.run_name,
             config=training_args.to_dict(),
-            tags=["gsm8k"],
+            tags=training_args.tags,
             group="dpo",
         )
 
