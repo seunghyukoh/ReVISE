@@ -8,14 +8,14 @@ TRAIN_NUM_COMPLETIONS=10 # Customize this
 EVAL_NUM_COMPLETIONS=1
 
 python revise/make_dataset.py \
-    --model_name_or_path "${TEMP_PATH}/step-1-dpo" \
+    --model_name_or_path "${TEMP_PATH}/step-2-dpo" \
     --dataset_path "${HUB_USER_ID}/gsm8k" \
     --dataset_name default \
     --seed 42 \
     --train_num_completions ${TRAIN_NUM_COMPLETIONS} \
     --eval_num_completions ${EVAL_NUM_COMPLETIONS} \
     --hub_repo_id "${HUB_USER_ID}/gsm8k" \
-    --hub_config_name "llama-3.2-1b-step-2" \
+    --hub_config_name "llama-3.2-1b-step-3" \
     --is_for_verifier_training false \
     --num_splits 2 \
-    --split_index 0
+    --split_index 1

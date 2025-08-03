@@ -14,6 +14,8 @@ python revise/make_dataset.py \
     --seed 42 \
     --train_num_completions ${TRAIN_NUM_COMPLETIONS} \
     --eval_num_completions ${EVAL_NUM_COMPLETIONS} \
-    --hub_repo_id "${HUB_USER_ID}/revise-gsm8k-llama-3.2-1b" \
-    --hub_config_name "step-1-dataset" \
-    --is_for_verifier_training true # Set this to True for verifier training
+    --hub_repo_id "${HUB_USER_ID}/gsm8k" \
+    --hub_config_name "llama-3.2-1b-step-1" \
+    --is_for_verifier_training true \
+    --num_splits 1 \
+    --split_index 0

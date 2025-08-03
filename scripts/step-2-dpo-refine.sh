@@ -5,33 +5,35 @@ HUB_USER_ID="JakeOh"
 TEMP_PATH="./.tmp"
 
 # Batch size configuration (for multi-GPU training)
-BATCH_SIZE=32
+BATCH_SIZE=64
 NUM_GPUS=$(nvidia-smi --list-gpus | wc -l)
-PER_DEVICE_TRAIN_BATCH_SIZE=8
-PER_DEVICE_EVAL_BATCH_SIZE=16
+PER_DEVICE_TRAIN_BATCH_SIZE=2
+PER_DEVICE_EVAL_BATCH_SIZE=4
 GRADIENT_ACCUMULATION_STEPS=$((BATCH_SIZE / (PER_DEVICE_TRAIN_BATCH_SIZE * NUM_GPUS)))
 GRADIENT_ACCUMULATION_STEPS=$((GRADIENT_ACCUMULATION_STEPS > 1 ? GRADIENT_ACCUMULATION_STEPS : 1))
 
 # Training configuration
-LEARNING_RATE=1e-4
+RPO_ALPHA=0.1
+LEARNING_RATE=1e-5
 WARMUP_RATIO=0.1
-NUM_TRAIN_EPOCHS=3
+NUM_TRAIN_EPOCHS=1
 EVAL_STRATEGY=steps
 EVAL_STEPS=0.1
 SAVE_STRATEGY=steps
 SAVE_STEPS=0.1
 SAVE_TOTAL_LIMIT=1
 
-accelerate launch revise/sft.py \
-    --model_name_or_path meta-llama/llama-3.2-1b \
+accelerate launch revise/dpo.py \
+    --run_name "step-2-dpo-refine" \
+    --model_name_or_path "${TEMP_PATH}/step-1-dpo" \
     --dataset_path "${HUB_USER_ID}/gsm8k" \
-    --dataset_name default \
-    --output_dir "${TEMP_PATH}/step-0-sft" \
-    --completion_only_loss true \
+    --dataset_name "llama-3.2-1b-step-2" \
+    --output_dir "${TEMP_PATH}/step-2-dpo" \
     --per_device_train_batch_size ${PER_DEVICE_TRAIN_BATCH_SIZE} \
     --per_device_eval_batch_size ${PER_DEVICE_EVAL_BATCH_SIZE} \
     --gradient_accumulation_steps ${GRADIENT_ACCUMULATION_STEPS} \
     --ddp_find_unused_parameters false \
+    --rpo_alpha ${RPO_ALPHA} \
     --bf16 true \
     --learning_rate ${LEARNING_RATE} \
     --warmup_ratio ${WARMUP_RATIO} \
@@ -47,6 +49,5 @@ accelerate launch revise/sft.py \
     --report_to wandb \
     --push_to_hub false \
     --hub_strategy end \
-    --hub_model_id "${HUB_USER_ID}/revise-gsm8k-llama-3.2-1b-step-0-sft" \
+    --hub_model_id "${HUB_USER_ID}/revise-gsm8k-llama-3.2-1b-step-2-dpo" \
     --hub_private_repo false
-    
