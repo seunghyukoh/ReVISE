@@ -98,6 +98,14 @@ class VllmGenerator(BaseGenerator):
         if self.num_gpus == 0:
             raise RuntimeError("No GPUs available")
 
+        # For vllm caching
+        LLM(
+            model=model,
+            device="cuda:0",
+            dtype=torch.float16,
+            task="generate",
+        )
+
     def _chunk_prompts(
         self, prompts: List[str]
     ) -> Tuple[List[List[str]], List[List[int]]]:
