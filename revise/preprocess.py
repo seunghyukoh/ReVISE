@@ -1,11 +1,14 @@
-from datasets import load_dataset
 import re
+
+from datasets import load_dataset
 
 if __name__ == "__main__":
     HUB_USER_ID = "JakeOh"
 
     # Example preprocessing pipeline
     gsm8k = load_dataset("openai/gsm8k", name="main")
+    gsm8k.cleanup_cache_files()
+
     gsm8k = gsm8k.map(
         lambda x: {
             "question": x["question"],
