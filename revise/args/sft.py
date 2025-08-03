@@ -6,6 +6,14 @@ from trl import SFTConfig as DefaultSFTConfig
 
 @dataclass
 class SFTConfig(DefaultSFTConfig):
+    run_name: str = field(
+        default="sft",
+        metadata={"help": "The name of the run"},
+    )
+    tags: list[str] = field(
+        default_factory=list,
+        metadata={"help": "The tags of the run"},
+    )
     model_name_or_path: str = field(
         default=None, metadata={"help": "The model name or path to use for training"}
     )
@@ -18,6 +26,10 @@ class SFTConfig(DefaultSFTConfig):
     )
     dataset_name: Optional[str] = field(
         default="default", metadata={"help": "The dataset name to use for training"}
+    )
+    early_stopping_patience: int = field(
+        default=2,
+        metadata={"help": "The patience for early stopping"},
     )
 
     def __post_init__(self):

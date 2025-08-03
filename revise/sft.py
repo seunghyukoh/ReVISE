@@ -1,5 +1,10 @@
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    EarlyStoppingCallback,
+    HfArgumentParser,
+)
 from trl import SFTTrainer
 
 from revise.args.sft import SFTConfig
@@ -24,7 +29,7 @@ def load_dataset(path: str, name: str):
         }
     )
 
-    return {"train": dataset["train"], "eval": dataset["test"]}
+    return {"train": dataset["train"], "eval": dataset["eval"]}
 
 
 if __name__ == "__main__":
@@ -36,9 +41,9 @@ if __name__ == "__main__":
 
         wandb.init(
             project="revise",
-            name="sft",
+            name=training_args.run_name,
             config=training_args.to_dict(),
-            tags=["gsm8k"],
+            tags=training_args.tags,
             group="sft",
         )
 
@@ -57,6 +62,8 @@ if __name__ == "__main__":
 
     if tokenizer.chat_template is None:
         tokenizer.chat_template = DEFAULT_CHAT_TEMPLATE
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
     trainer = SFTTrainer(
         model=model,
@@ -64,6 +71,11 @@ if __name__ == "__main__":
         train_dataset=dataset["train"],
         eval_dataset=dataset["eval"] if "eval" in dataset else None,
         args=training_args,
+        callbacks=[
+            EarlyStoppingCallback(
+                early_stopping_patience=training_args.early_stopping_patience
+            )
+        ],
     )
 
     # Clear cache to mitigate memory issues
