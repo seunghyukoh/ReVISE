@@ -57,3 +57,11 @@ class MakeDatasetArgs:
         default="default",
         metadata={"help": "The hub repository config name to save the dataset"},
     )
+    num_splits: int = field(
+        default=1,
+        metadata={"help": "The number of splits to make the dataset"},
+    )
+    split_index: int = field(
+        default=0,
+        metadata={"help": "The index of the split to make the dataset"},
+    )

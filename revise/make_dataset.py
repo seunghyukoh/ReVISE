@@ -22,7 +22,7 @@ def generate_and_evaluate(
     dataset: Dataset,
     evaluator: Union[BaseComparisonEvaluator],
     prepare_batch_chat_messages_fn: Callable,
-    max_new_tokens=2048,
+    max_new_tokens=1024,
     temperature=0.7,
     num_completions=10,
     top_p=0.9,
@@ -232,7 +232,9 @@ if __name__ == "__main__":
     evaluator = GSM8KEvaluator(mode="flexible")
 
     dataset = load_dataset(args.dataset_path, args.dataset_name)
-    train_dataset = dataset["train"]
+    train_dataset = dataset["train"].select(
+        range(args.split_index, len(dataset["train"]), args.num_splits)
+    )
     eval_dataset = dataset["eval"]
 
     prepare_batch_chat_messages_fn = prepare_batch_chat_messages_fns[args.dataset_type]
