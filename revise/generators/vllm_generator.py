@@ -26,6 +26,7 @@ class VllmGenerationParams(GenerationParams):
             top_k=self.top_k if self.top_k is not None else -1,
             n=self.num_completions,
             seed=self.seed,
+            skip_special_tokens=self.skip_special_tokens,
         )
 
 

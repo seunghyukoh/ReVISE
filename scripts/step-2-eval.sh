@@ -4,7 +4,6 @@
 MODEL_NAME="llama-3.2-1b"
 MODEL_PATH="./.tmp/step-2-dpo"
 
-# Step-2 (DPO)
 lm_eval \
     --model hf \
     --model_args pretrained=${MODEL_PATH} \

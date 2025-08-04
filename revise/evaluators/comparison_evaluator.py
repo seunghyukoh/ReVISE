@@ -36,7 +36,7 @@ class GSM8KEvaluator(BaseComparisonEvaluator):
         self.mode = mode
         is_strict = self.mode == "strict"
 
-        self.answer_filter = RegexFilter(pattern=self.STRICT_MATCH)
+        self.answer_filter = RegexFilter(pattern=self.FLEXIBLE_EXTRACT, select_index=-1)
         self.prediction_filter = RegexFilter(
             pattern=self.STRICT_MATCH if is_strict else self.FLEXIBLE_EXTRACT,
             select_index=0 if is_strict else -1,

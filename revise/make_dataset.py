@@ -5,7 +5,7 @@ from typing import Callable, Union
 
 from datasets import Dataset, load_dataset
 
-from revise.config import DEFAULT_REFINE_TOKEN
+from revise.config import DEFAULT_EOS_TOKEN, DEFAULT_REFINE_TOKEN
 from revise.evaluators.comparison_evaluator import (
     BaseComparisonEvaluator,
     GSM8KEvaluator,
@@ -32,6 +32,8 @@ def generate_and_evaluate(
     answer_key="answer",
     prediction_key="prediction",
     ignore_cache=False,
+    refine_token=DEFAULT_REFINE_TOKEN,
+    eos_token=DEFAULT_EOS_TOKEN,
 ):
     params = dict(
         model_path=model_path,
@@ -82,7 +84,7 @@ def generate_and_evaluate(
     generator = VllmGenerator(model=model_path, gen_params=generation_params)
 
     # Generate
-    predictions = generator.chat(batch_chat_messages)  # List[List[str]]
+    outputs = generator.chat(batch_chat_messages)  # List[List[str]]
 
     # Evaluate
     new_dataset = []
@@ -90,33 +92,47 @@ def generate_and_evaluate(
     questions = dataset[question_key]
     gt_answers = dataset[answer_key]
 
-    for question, gt_answer, prediction_set in zip(questions, gt_answers, predictions):
-        num_predictions = len(prediction_set)
-        if num_predictions < num_completions:
+    def routine(pred_trajectory: str):
+        pred_trajectory = pred_trajectory.split(eos_token)[0]
+        predictions = pred_trajectory.split(refine_token)
+        predictions = [
+            prediction.strip() for prediction in predictions if prediction.strip()
+        ]
+        return predictions
+
+    for question, gt_answer, pred_trajectories in zip(questions, gt_answers, outputs):
+        num_trajectories = len(pred_trajectories)  # List[str]
+        if num_trajectories < num_completions:
             logger.warning(
-                f"Only {num_predictions} predictions generated for {question}"
+                f"Only {num_trajectories} predictions generated for {question}"
             )
 
-        if num_predictions == 0:
+        if num_trajectories == 0:
             logger.warning(f"No predictions generated for {question}")
             continue
 
-        scores = evaluator.run(
-            answers=[gt_answer] * num_predictions,
-            predictions=prediction_set,
-            return_results=True,
-        )
-        score_list = scores["score_list"]
+        for pred_trajectory in pred_trajectories:
+            predictions = routine(pred_trajectory)
+            num_predictions = len(predictions)
 
-        for prediction, is_correct in zip(prediction_set, score_list):
-            new_dataset.append(
-                {
-                    question_key: question,
-                    answer_key: gt_answer,
-                    prediction_key: prediction,
-                    "is_correct": is_correct,
-                }
+            scores = evaluator.run(
+                answers=[gt_answer] * num_predictions,
+                predictions=predictions,
+                return_results=True,
             )
+            score_list = scores["score_list"]
+
+            for prediction, is_correct in zip(predictions, score_list):
+                new_dataset.append(
+                    {
+                        question_key: question,
+                        answer_key: gt_answer,
+                        prediction_key: prediction,
+                        "is_correct": is_correct,
+                    }
+                )
+                if not is_correct:
+                    break
 
     new_dataset = Dataset.from_list(new_dataset)
     with open(cache_path, "w") as f:

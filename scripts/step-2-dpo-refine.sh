@@ -47,7 +47,7 @@ accelerate launch revise/dpo.py \
     --load_best_model_at_end true \
     --metric_for_best_model loss \
     --report_to wandb \
-    --push_to_hub false \
+    --push_to_hub true \
     --hub_strategy end \
-    --hub_model_id "${HUB_USER_ID}/revise-gsm8k-llama-3.2-1b-step-2-dpo" \
+    --hub_model_id "${HUB_USER_ID}/llama-3.2-1b-gsm8k-step-2-dpo" \
     --hub_private_repo false

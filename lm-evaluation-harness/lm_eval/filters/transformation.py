@@ -72,6 +72,22 @@ class TakeBeforeTargetFilter(Filter):
         return [filter_set(resp) for resp in resps]
 
 
+@register_filter("remove_target_tokens")
+class RemoveTargetTokensFilter(Filter):
+    TARGET_TOKENS = ["<|target|>"]
+
+    def __init__(self, target_tokens: list[str] = None) -> None:
+        self.target_tokens = target_tokens or self.TARGET_TOKENS
+
+    def apply(self, resps, docs):
+        def filter_set(inst):
+            for target_token in self.target_tokens:
+                inst = [resp.replace(target_token, "") for resp in inst]
+            return inst
+
+        return [filter_set(resp) for resp in resps]
+
+
 @register_filter("format_span")
 class SPANFilter(Filter):
     def __init__(self) -> None:

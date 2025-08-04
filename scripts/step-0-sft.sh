@@ -27,7 +27,7 @@ accelerate launch revise/sft.py \
     --dataset_path "${HUB_USER_ID}/gsm8k" \
     --dataset_name default \
     --output_dir "${TEMP_PATH}/step-0-sft" \
-    --completion_only_loss true \
+    --completion_only_loss false \
     --per_device_train_batch_size ${PER_DEVICE_TRAIN_BATCH_SIZE} \
     --per_device_eval_batch_size ${PER_DEVICE_EVAL_BATCH_SIZE} \
     --gradient_accumulation_steps ${GRADIENT_ACCUMULATION_STEPS} \
@@ -45,8 +45,8 @@ accelerate launch revise/sft.py \
     --load_best_model_at_end true \
     --metric_for_best_model loss \
     --report_to wandb \
-    --push_to_hub false \
+    --push_to_hub true \
     --hub_strategy end \
-    --hub_model_id "${HUB_USER_ID}/revise-gsm8k-llama-3.2-1b-step-0-sft" \
+    --hub_model_id "${HUB_USER_ID}/llama-3.2-1b-gsm8k-step-0-sft" \
     --hub_private_repo false
     
