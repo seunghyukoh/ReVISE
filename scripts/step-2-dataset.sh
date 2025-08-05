@@ -17,5 +17,5 @@ python revise/make_dataset.py \
     --hub_repo_id "${HUB_USER_ID}/gsm8k" \
     --hub_config_name "llama-3.2-1b-step-2" \
     --is_for_verifier_training false \
-    --num_splits 2 \
-    --split_index 1
+    --num_splits 1 \
+    --split_index 0
