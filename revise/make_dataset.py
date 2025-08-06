@@ -235,7 +235,7 @@ def make_dataset(
 
 if __name__ == "__main__":
     from datasets import DatasetDict
-    from prompts import prepare_batch_chat_messages_fns
+    from revise.prompts import prepare_batch_chat_messages_fns
     from transformers.hf_argparser import HfArgumentParser
 
     from revise.args.make_dataset import MakeDatasetArgs
