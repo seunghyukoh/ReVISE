@@ -1,10 +1,15 @@
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, HfArgumentParser
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    EarlyStoppingCallback,
+    HfArgumentParser,
+)
 from trl import SFTTrainer
 
 from revise.args.sft import SFTConfig
-from revise.prompts import prepare_chat_messages_fns
 from revise.config import DEFAULT_CHAT_TEMPLATE
+from revise.prompts import prepare_chat_messages_fns
 
 
 def load_dataset(path: str, name: str):
@@ -24,12 +29,23 @@ def load_dataset(path: str, name: str):
         }
     )
 
-    return {"train": dataset["train"], "eval": dataset["test"]}
+    return {"train": dataset["train"], "eval": dataset["eval"]}
 
 
 if __name__ == "__main__":
     parser = HfArgumentParser(SFTConfig)
     [training_args] = parser.parse_args_into_dataclasses()
+
+    if training_args.should_log:
+        import wandb
+
+        wandb.init(
+            project="revise",
+            name=training_args.run_name,
+            config=training_args.to_dict(),
+            tags=training_args.tags,
+            group="sft",
+        )
 
     dataset = load_dataset(training_args.dataset_path, training_args.dataset_name)
 
@@ -37,7 +53,7 @@ if __name__ == "__main__":
         training_args.model_name_or_path,
         attn_implementation="flash_attention_2",  # Enable Flash Attention
         torch_dtype=torch.bfloat16,
-        device_map="auto",
+        device_map="cuda",
     )
 
     tokenizer = AutoTokenizer.from_pretrained(
@@ -46,6 +62,8 @@ if __name__ == "__main__":
 
     if tokenizer.chat_template is None:
         tokenizer.chat_template = DEFAULT_CHAT_TEMPLATE
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
     trainer = SFTTrainer(
         model=model,
@@ -53,6 +71,11 @@ if __name__ == "__main__":
         train_dataset=dataset["train"],
         eval_dataset=dataset["eval"] if "eval" in dataset else None,
         args=training_args,
+        callbacks=[
+            EarlyStoppingCallback(
+                early_stopping_patience=training_args.early_stopping_patience
+            )
+        ],
     )
 
     # Clear cache to mitigate memory issues

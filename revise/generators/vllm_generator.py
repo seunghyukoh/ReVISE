@@ -26,6 +26,7 @@ class VllmGenerationParams(GenerationParams):
             top_k=self.top_k if self.top_k is not None else -1,
             n=self.num_completions,
             seed=self.seed,
+            skip_special_tokens=self.skip_special_tokens,
         )
 
 
@@ -97,6 +98,14 @@ class VllmGenerator(BaseGenerator):
         self.num_gpus = torch.cuda.device_count()
         if self.num_gpus == 0:
             raise RuntimeError("No GPUs available")
+
+        # For vllm caching
+        LLM(
+            model=model,
+            device="cuda:0",
+            dtype=torch.float16,
+            task="generate",
+        )
 
     def _chunk_prompts(
         self, prompts: List[str]

@@ -1,16 +1,14 @@
+from .evaluators import (
+    BaseComparisonEvaluator,
+    GSM8KEvaluator,
+    MATHEvaluator,
+)
 from .generators import (
     BaseGenerator,
     GenerationParams,
     VllmGenerationParams,
     VllmGenerator,
 )
-
-from .evaluators import (
-    BaseComparisonEvaluator,
-    GSM8KEvaluator,
-    MATHEvaluator,
-)
-
 from .utils import configure_logging, hash_params
 
 __all__ = [
