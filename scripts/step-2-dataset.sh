@@ -1,8 +1,7 @@
 #!/bin/bash
 
 # Set environment variables
-HUB_USER_ID="JakeOh"
-TEMP_PATH="./.tmp"
+source .env
 
 TRAIN_NUM_COMPLETIONS=10 # Customize this
 EVAL_NUM_COMPLETIONS=3

@@ -1,13 +1,12 @@
 #!/bin/bash
 
 # Set environment variables
-HUB_USER_ID="JakeOh"
-TEMP_PATH="./.tmp"
+source .env
 
 # Batch size configuration (for multi-GPU training)
 BATCH_SIZE=64
 NUM_GPUS=$(nvidia-smi --list-gpus | wc -l)
-PER_DEVICE_TRAIN_BATCH_SIZE=2
+PER_DEVICE_TRAIN_BATCH_SIZE=2 # This config is for A6000 48GB GPUs
 PER_DEVICE_EVAL_BATCH_SIZE=4
 GRADIENT_ACCUMULATION_STEPS=$((BATCH_SIZE / (PER_DEVICE_TRAIN_BATCH_SIZE * NUM_GPUS)))
 GRADIENT_ACCUMULATION_STEPS=$((GRADIENT_ACCUMULATION_STEPS > 1 ? GRADIENT_ACCUMULATION_STEPS : 1))

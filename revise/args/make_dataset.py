@@ -17,7 +17,7 @@ class MakeDatasetArgs:
         metadata={"help": "The type of dataset to use for training"},
     )
     dataset_path: str = field(
-        default="JakeOh/gsm8k",
+        default=None,
         metadata={"help": "The dataset path to use for training"},
     )
     dataset_name: Optional[str] = field(
