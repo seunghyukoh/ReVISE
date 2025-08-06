@@ -103,7 +103,7 @@ This script runs the ReVISE inference process on the GSM8K benchmark by default.
 
 ```bibtex
 @article{lee2025revise,
-  title={Revise: Learning to refine at test-time via intrinsic self-verification},
+  title={ReVISE: Learning to Refine at Test-Time via Intrinsic Self-Verification},
   author={Lee, Hyunseok and Oh, Seunghyuk and Kim, Jaehyung and Shin, Jinwoo and Tack, Jihoon},
   journal={arXiv preprint arXiv:2502.14565},
   year={2025}
