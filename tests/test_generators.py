@@ -87,21 +87,6 @@ class TestVllmGeneratorWithPytest:
             VllmGenerator(model="test-model")
 
     @patch("ray.get")
-    @patch("revise.generators.vllm_generator._generate_on_gpu")
-    def test_generate(self, mock_generate_on_gpu, mock_ray_get, mock_vllm):
-        """Test generation with VllmGenerator."""
-        mock_generate_on_gpu.remote.return_value = "future"
-        mock_ray_get.return_value = [
-            [(0, ["generated text 1"]), (1, ["generated text 2"])]
-        ]
-
-        generator = VllmGenerator(model="test-model")
-        results = generator.generate(["prompt 1", "prompt 2"])
-
-        assert results == [["generated text 1"], ["generated text 2"]]
-        assert mock_generate_on_gpu.remote.call_count == 2  # Device count
-
-    @patch("ray.get")
     @patch("revise.generators.vllm_generator._generate_on_gpu_chat")
     def test_chat(self, mock_generate_on_gpu_chat, mock_ray_get, mock_vllm):
         """Test generate method with chat messages."""

@@ -69,35 +69,3 @@ class GSM8KEvaluator(BaseComparisonEvaluator):
             return results
 
         return results["exact_match"]
-
-
-class MATHEvaluator(BaseComparisonEvaluator):
-    def __init__(self):
-        self.regexes_to_ignore = None
-        self.ignore_case = False
-        self.ignore_punctuation = False
-
-    def run(
-        self, answers: List[str], predictions: List[str], return_results: bool = False
-    ) -> Union[float, Dict[str, Any]]:
-        def process(text: str) -> str:
-            try:
-                return remove_boxed(last_boxed_only_string(text))
-            except Exception:
-                return text
-
-        references = [process(answer) for answer in answers]
-        predictions = [process(prediction) for prediction in predictions]
-
-        results = compute_exact_match(
-            references=references,
-            predictions=predictions,
-            regexes_to_ignore=self.regexes_to_ignore,
-            ignore_case=self.ignore_case,
-            ignore_punctuation=self.ignore_punctuation,
-        )
-
-        if return_results:
-            return results
-
-        return results["exact_match"]

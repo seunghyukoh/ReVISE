@@ -31,37 +31,6 @@ class VllmGenerationParams(GenerationParams):
 
 
 @ray.remote(num_gpus=1)
-def _generate_on_gpu(
-    prompts: List[str],
-    indices: List[int],
-    sampling_params: VllmGenerationParams,
-    model: str,
-):
-    """
-    Ray actor: runs on a single GPU using provided SamplingParams.
-    """
-    # Instantiate LLM on this GPU
-    # Ray will set CUDA_VISIBLE_DEVICES, so use cuda:0 to refer to the assigned GPU
-    llm = LLM(
-        model=model,
-        device="cuda:0",
-        dtype=torch.float16,
-        task="generate",
-    )
-    request_output = llm.generate(prompts, sampling_params=sampling_params)
-    results = []
-    for idx, req_output in enumerate(request_output):
-        # We only want to include outputs that are complete (i.e. ended with an EOS token)
-        texts = [
-            completion.text
-            for completion in req_output.outputs
-            if completion.finish_reason == "stop" and completion.text
-        ]
-        results.append((indices[idx], texts))
-    return results
-
-
-@ray.remote(num_gpus=1)
 def _generate_on_gpu_chat(
     messages: List[List[ChatCompletionMessageParam]],
     indices: List[int],
@@ -107,23 +76,6 @@ class VllmGenerator(BaseGenerator):
             task="generate",
         )
 
-    def _chunk_prompts(
-        self, prompts: List[str]
-    ) -> Tuple[List[List[str]], List[List[int]]]:
-        """
-        Split prompts into chunks based on available GPUs and track original indices.
-        """
-        chunk_size = (len(prompts) + self.num_gpus - 1) // self.num_gpus
-        prompt_chunks = [
-            prompts[i * chunk_size : min((i + 1) * chunk_size, len(prompts))]
-            for i in range(self.num_gpus)
-        ]
-        index_chunks = [
-            list(range(i * chunk_size, min((i + 1) * chunk_size, len(prompts))))
-            for i in range(self.num_gpus)
-        ]
-        return prompt_chunks, index_chunks
-
     def _chunk_messages(
         self, messages: List[List[ChatCompletionMessageParam]]
     ) -> Tuple[List[List[ChatCompletionMessageParam]], List[List[int]]]:
@@ -140,30 +92,6 @@ class VllmGenerator(BaseGenerator):
             for i in range(self.num_gpus)
         ]
         return messages_chunks, index_chunks
-
-    def generate(self, prompts: List[str]) -> List[List[str]]:
-        if not ray.is_initialized():
-            ray.init()
-
-        # Prepare tasks
-        sampling_params = self.gen_params.to_vllm_sampling_params()
-        # Split prompts and indices into GPU-based chunks
-        prompt_chunks, index_chunks = self._chunk_prompts(prompts)
-        futures = [
-            _generate_on_gpu.remote(
-                prompt_chunks[i],
-                index_chunks[i],
-                sampling_params,
-                self.model,
-            )
-            for i in range(self.num_gpus)
-            if prompt_chunks[i]
-        ]
-        results = ray.get(futures)
-        # Merge preserving original order by index
-        all_items = [item for sub in results for item in sub]
-        all_items.sort(key=lambda x: x[0])
-        return [texts for _, texts in all_items]
 
     def chat(self, messages: List[List[ChatCompletionMessageParam]]) -> List[List[str]]:
         if not ray.is_initialized():
