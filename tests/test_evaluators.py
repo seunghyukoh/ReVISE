@@ -1,6 +1,7 @@
 import pytest
 
-from revise.evaluators.comparison_evaluator import GSM8KEvaluator, MATHEvaluator
+from revise.evaluators.comparison_evaluator import GSM8KEvaluator
+from revise.evaluators.math_evaluator import MATHEvaluator
 
 
 @pytest.mark.unit
