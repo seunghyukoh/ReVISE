@@ -28,7 +28,7 @@
   <img src="./assets/concept_figure.png" alt="ReVISE Overview" width="1024"/>
 </p>
 
-**Summary:** We propse **Re**fine **V**ia **I**ntrinsic **SE**lf-Verification (ReVISE), a method that allows LLMs to check and improve their own reasoning during inference **without external feedback or more supervision.** ReVISE trains the model to spot when its reasoning might be unreliable and decide whether to keep going or change its answer. It uses **a two-stage training process** and decoding that is aware of confidence levels to guide these decisions.
+**Summary:** We propose **Re**fine **V**ia **I**ntrinsic **SE**lf-Verification (ReVISE), a method that allows LLMs to check and improve their own reasoning during inference **without external feedback or more supervision.** ReVISE trains the model to spot when its reasoning might be unreliable and decide whether to keep going or change its answer. It uses **a two-stage training process** and decoding that is aware of confidence levels to guide these decisions.
 
 ## Updates
 
