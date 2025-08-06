@@ -1,9 +1,13 @@
+import os
 import re
 
 from datasets import load_dataset
+from dotenv import load_dotenv
 
 if __name__ == "__main__":
-    HUB_USER_ID = "JakeOh"
+    load_dotenv()
+
+    HUB_USER_ID = os.getenv("HUB_USER_ID")
 
     # Example preprocessing pipeline
     dataset = load_dataset("openai/gsm8k", name="main")

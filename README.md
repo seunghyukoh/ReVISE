@@ -85,6 +85,7 @@ Now, open the `.env` file and add your configurations. This might include API ke
 # Example content
 HUB_USER_ID="<Huggingface User ID>"
 TEMP_PATH="./.tmp" # where model checkpoints are saved
+WANDB_PROJECT_NAME=revise
 ```
 
 ### 2. Run the Main Script
