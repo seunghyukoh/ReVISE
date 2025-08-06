@@ -76,23 +76,6 @@ class VllmGenerator(BaseGenerator):
             task="generate",
         )
 
-    def _chunk_prompts(
-        self, prompts: List[str]
-    ) -> Tuple[List[List[str]], List[List[int]]]:
-        """
-        Split prompts into chunks based on available GPUs and track original indices.
-        """
-        chunk_size = (len(prompts) + self.num_gpus - 1) // self.num_gpus
-        prompt_chunks = [
-            prompts[i * chunk_size : min((i + 1) * chunk_size, len(prompts))]
-            for i in range(self.num_gpus)
-        ]
-        index_chunks = [
-            list(range(i * chunk_size, min((i + 1) * chunk_size, len(prompts))))
-            for i in range(self.num_gpus)
-        ]
-        return prompt_chunks, index_chunks
-
     def _chunk_messages(
         self, messages: List[List[ChatCompletionMessageParam]]
     ) -> Tuple[List[List[ChatCompletionMessageParam]], List[List[int]]]:
