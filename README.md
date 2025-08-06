@@ -45,12 +45,13 @@ cd revise
 
 ### 2. Set up your Python environment
 
-You can use either `venv` or `Conda` to set up your environment. 
+You can use either `venv` or `Conda` to set up your environment.
 
 #### Using venv
 
 ```bash
-python -m venv .venv
+# Python <= 3.12
+{path/to/python3.X} -m venv .venv
 source .venv/bin/activate
 pip install -e .
 
