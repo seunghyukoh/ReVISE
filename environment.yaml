@@ -8,4 +8,4 @@ dependencies:
   - setuptools
   - pip:
     - -e .
-    - -e lm-evaluation-harness
+    - -e ./lm-evaluation-harness
