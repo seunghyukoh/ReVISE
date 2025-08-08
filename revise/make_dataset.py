@@ -84,7 +84,7 @@ def generate_and_evaluate(
     generator = VllmGenerator(model=model_path, gen_params=generation_params)
 
     # Generate
-    outputs = generator.chat(batch_chat_messages)  # List[List[str]]
+    outputs = generator.generate(batch_chat_messages)  # List[List[str]]
 
     # Evaluate
     new_dataset = []
