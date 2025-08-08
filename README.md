@@ -53,7 +53,7 @@ conda env create -f environment.yaml
 conda activate revise
 
 # Install flash-attn
-pip install flash-attn --no-build-isolation
+pip install flash-attn==2.7.3 --no-build-isolation
 ````
 
 ## How to Run ReVISE
