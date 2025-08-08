@@ -45,24 +45,12 @@ cd revise
 
 ### 2. Set up your Python environment
 
-You can use either `venv` or `Conda` to set up your environment.
+You can use `Conda` to set up your environment.
 
-#### Using venv
-
-```bash
-# Python <= 3.12
-{path/to/python3.X} -m venv .venv
-source .venv/bin/activate
-pip install -e .
-
-# Install flash-attn
-pip install flash-attn --no-build-isolation
-```
-
-#### Using conda
+#### Using Conda
 
 ````bash
-conda env create -f environment.yml
+conda env create -f environment.yaml
 conda activate revise
 
 # Install flash-attn

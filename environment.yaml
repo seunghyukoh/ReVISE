@@ -1,10 +1,12 @@
 name: revise
 channels:
-  - conda-forge
   - defaults
-
+  - conda-forge
 dependencies:
   - python=3.12
   - pip
+  - cython
+  - setuptools
   - pip:
-      - -e .
+    - -e .
+    - -e lm-evaluation-harness
