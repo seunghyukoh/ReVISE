@@ -37,9 +37,15 @@ if __name__ == "__main__":
     [training_args] = parser.parse_args_into_dataclasses()
 
     if training_args.should_log:
+        import os
+
         import wandb
+        from dotenv import load_dotenv
+
+        load_dotenv()
 
         wandb.init(
+            entity=os.getenv("WANDB_ENTITY"),
             project="revise",
             name=training_args.run_name,
             config=training_args.to_dict(),
