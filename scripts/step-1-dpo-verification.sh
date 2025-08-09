@@ -49,5 +49,4 @@ accelerate launch revise/dpo.py \
     --push_to_hub true \
     --hub_strategy end \
     --hub_model_id "${HUB_USER_ID}/llama-3.2-1b-gsm8k-step-1-dpo" \
-    --hub_private_repo false \
-    --torch_compile true
+    --hub_private_repo false
