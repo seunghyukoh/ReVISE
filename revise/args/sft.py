@@ -27,10 +27,6 @@ class SFTConfig(DefaultSFTConfig):
     dataset_name: Optional[str] = field(
         default="default", metadata={"help": "The dataset name to use for training"}
     )
-    early_stopping_patience: int = field(
-        default=2,
-        metadata={"help": "The patience for early stopping"},
-    )
 
     def __post_init__(self):
         super().__post_init__()

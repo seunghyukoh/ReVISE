@@ -2,7 +2,6 @@ import torch
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
-    EarlyStoppingCallback,
     HfArgumentParser,
 )
 from trl import SFTTrainer
@@ -77,11 +76,6 @@ if __name__ == "__main__":
         train_dataset=dataset["train"],
         eval_dataset=dataset["eval"] if "eval" in dataset else None,
         args=training_args,
-        callbacks=[
-            EarlyStoppingCallback(
-                early_stopping_patience=training_args.early_stopping_patience
-            )
-        ],
     )
 
     # Clear cache to mitigate memory issues
