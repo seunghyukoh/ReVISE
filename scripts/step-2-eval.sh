@@ -5,7 +5,7 @@ source .env
 
 # Model path
 MODEL_NAME="llama-3.2-1b"
-MODEL_PATH="./.tmp/step-2-dpo"
+MODEL_PATH="${TEMP_PATH}/step-2-dpo"
 TASK_NAME="gsm8k_cot_zeroshot_custom"
 
 lm_eval \

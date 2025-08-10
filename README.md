@@ -23,9 +23,8 @@
   </a>
 </p>
 
-
 <p align="center">
-  <img src="./assets/concept_figure.png" alt="ReVISE Overview" width="1024"/>
+  <img src="./docs/concept_figure.png" alt="ReVISE Overview" width="1024"/>
 </p>
 
 **Summary:** We propose **Re**fine **V**ia **I**ntrinsic **SE**lf-Verification (ReVISE), a method that allows LLMs to check and improve their own reasoning during inference **without external feedback or more supervision.** ReVISE trains the model to spot when its reasoning might be unreliable and decide whether to keep going or change its answer. It uses **a two-stage training process** and decoding that is aware of confidence levels to guide these decisions.
@@ -45,27 +44,16 @@ cd revise
 
 ### 2. Set up your Python environment
 
-You can use either `venv` or `Conda` to set up your environment. 
+You can use `Conda` to set up your environment.
 
-#### Using venv
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -e .
-
-# Install flash-attn
-pip install flash-attn --no-build-isolation
-```
-
-#### Using conda
+#### Using Conda
 
 ````bash
-conda env create -f environment.yml
+conda env create -f environment.yaml
 conda activate revise
 
 # Install flash-attn
-pip install flash-attn --no-build-isolation
+pip install flash-attn==2.7.3 --no-build-isolation
 ````
 
 ## How to Run ReVISE
@@ -103,7 +91,7 @@ This script runs the ReVISE inference process on the GSM8K benchmark by default.
 
 ```bibtex
 @article{lee2025revise,
-  title={Revise: Learning to refine at test-time via intrinsic self-verification},
+  title={ReVISE: Learning to Refine at Test-Time via Intrinsic Self-Verification},
   author={Lee, Hyunseok and Oh, Seunghyuk and Kim, Jaehyung and Shin, Jinwoo and Tack, Jihoon},
   journal={arXiv preprint arXiv:2502.14565},
   year={2025}

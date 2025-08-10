@@ -84,7 +84,7 @@ def generate_and_evaluate(
     generator = VllmGenerator(model=model_path, gen_params=generation_params)
 
     # Generate
-    outputs = generator.chat(batch_chat_messages)  # List[List[str]]
+    outputs = generator.generate(batch_chat_messages)  # List[List[str]]
 
     # Evaluate
     new_dataset = []
@@ -235,7 +235,7 @@ def make_dataset(
 
 if __name__ == "__main__":
     from datasets import DatasetDict
-    from prompts import prepare_batch_chat_messages_fns
+    from revise.prompts import prepare_batch_chat_messages_fns
     from transformers.hf_argparser import HfArgumentParser
 
     from revise.args.make_dataset import MakeDatasetArgs

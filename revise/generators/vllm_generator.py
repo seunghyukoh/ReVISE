@@ -93,7 +93,9 @@ class VllmGenerator(BaseGenerator):
         ]
         return messages_chunks, index_chunks
 
-    def chat(self, messages: List[List[ChatCompletionMessageParam]]) -> List[List[str]]:
+    def generate(
+        self, messages: List[List[ChatCompletionMessageParam]]
+    ) -> List[List[str]]:
         if not ray.is_initialized():
             ray.init()
 

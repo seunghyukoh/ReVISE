@@ -1,7 +1,6 @@
 from .evaluators import (
     BaseComparisonEvaluator,
     GSM8KEvaluator,
-    MATHEvaluator,
 )
 from .generators import (
     BaseGenerator,
