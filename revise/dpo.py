@@ -28,7 +28,7 @@ if __name__ == "__main__":
 
         wandb.init(
             entity=os.getenv("WANDB_ENTITY"),
-            project="revise",
+            project=os.getenv("WANDB_PROJECT_NAME"),
             name=training_args.run_name,
             config=training_args.to_dict(),
             tags=training_args.tags,
