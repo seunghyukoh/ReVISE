@@ -19,7 +19,6 @@ __all__ = [
     # .evaluators
     "BaseComparisonEvaluator",
     "GSM8KEvaluator",
-    "MATHEvaluator",
     # .utils
     "configure_logging",
     "hash_params",
