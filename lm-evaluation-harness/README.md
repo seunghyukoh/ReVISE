@@ -1,3 +1,5 @@
+`Modified from EleutherAI's lm-evaluation-harness`
+
 # Language Model Evaluation Harness
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10256836.svg)](https://doi.org/10.5281/zenodo.10256836)
