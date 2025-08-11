@@ -85,7 +85,7 @@ bash scripts/revise.sh
 ```
 
 **What does this script do?**
-This script runs the ReVISE inference process on the GSM8K benchmark by default. You can modify the script to change parameters such as the model, dataset, or output directory.
+This script runs the ReVISE training process on the GSM8K benchmark by default. You can modify the script to change parameters such as the model, dataset, or output directory.
 
 ## BibTeX
 
