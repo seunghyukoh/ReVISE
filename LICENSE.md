@@ -16,7 +16,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 This project includes code from the following open source project(s):
 
 **lm-evaluation-harness**  
-Copyright (c) EleutherAI  
+Copyright (c) 2020 EleutherAI
 Licensed under the Apache License, Version 2.0  
 http://www.apache.org/licenses/LICENSE-2.0
 
