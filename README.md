@@ -31,7 +31,7 @@
 
 ## Updates
 
-**2025.8.6**: First code release
+**2025.8.11**: First code release
 
 ## Installation
 
